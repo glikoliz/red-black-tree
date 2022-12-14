@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
-struct rbtree *rbtree_add_fixup(struct rbtree *root, struct rbtree *z);
-void print2DUtil(struct rbtree* tree, int space);
-enum node_colors { RED, BLACK };
-struct rbtree{
-  int key; //номер
-  char* value; //значение
-  int color;  //цвет
-  struct rbtree *parent, *left, *right;
-};
-struct rbtree *root = NULL; //основное дерево
+#include "rbtree.h"
+// struct rbtree *rbtree_add_fixup(struct rbtree *root, struct rbtree *z);
+// void print2DUtil(struct rbtree* tree, int space);
+// enum node_colors { RED, BLACK };
+// struct rbtree{
+//   int key; //номер
+//   char* value; //значение
+//   int color;  //цвет
+//   struct rbtree *parent, *left, *right;
+// };
+// struct rbtree *root = NULL; //основное дерево
 struct rbtree *Create(int key, char* value)
 {
   struct rbtree *newnode;
@@ -179,48 +180,156 @@ struct rbtree *rbtree_add_fixup(struct rbtree *root, struct rbtree *z)
 }
 struct rbtree *rbtree_lookup(struct rbtree *tree, int key)
 {
-  
+  while(tree!=NULL)
+  {
+    if(key==tree->key)      
+      return tree;
+    else if(key<tree->key)
+      tree=tree->left;
+    else
+      tree=tree->right;
+  }
+  return tree;
 }
-struct rbtree *rbtree_delete(struct rbtree *tree, int key);
-struct rbtree *rbtree_min(struct rbtree *tree);
-struct rbtree *rbtree_max(struct rbtree *tree);
+struct rbtree *rbtree_delete(struct rbtree *tree, int key)
+{
+  struct rbtree* z = rbtree_lookup(root, key);
+  struct rbtree* x = NULL;
+  struct rbtree* y=z;
+  int y_orig_color=y->color;
+  if(z->left==NULL)
+  {
+    x=z->right;
+    rbtree_transplantant(root, z, z->right);
+  }
+  else if(z->right == NULL)
+  {
+    x=z->left;
+    rbtree_transplantant(root, z, z->left);
+  }
+  else // если у дерева два ребенка
+  {
+    y=rbtree_min(z->right);
+    y_orig_color=y->color;
+    x=y->right;
+    if(y->parent==z)
+    {
+      x->parent=y;
+    }
+    else
+    {
+      rbtree_transplantant(root, y, y->right);
+      y->right=z->right;
+      y->right->parent = y;
+    }
+    rbtree_transplantant(root, z, y);
+    y->left=z->left;
+    z->left->parent=y;
+    y->color=z->color;
+  }
+  if(y_orig_color==BLACK)
+  {
+    rbtree_delete_fixup(tree, x);
+  }
+}
+struct rbtree *rbtree_transplantant(struct rbtree *tree, struct rbtree *u, struct rbtree *v)
+{
+  if(u->parent==NULL)
+  {
+    root=v;
+  }
+  else if(u->parent->left==u)
+  {
+    u->parent->left=v;
+  }
+  else
+  {
+    u->parent->right=v;
+    v->parent=u->parent;
+  }
+}
+struct rbtree *rbtree_min(struct rbtree *tree)
+{
+  while(tree->left!=NULL)
+    tree=tree->left;
+  return tree;
+}
+struct rbtree *rbtree_max(struct rbtree *tree)
+{
+  while(tree->right!=NULL)
+    tree=tree->right;
+  return tree;
+}
+struct rbtree *rbtree_delete_fixup(struct rbtree *tree, struct rbtree *x)
+{
+  struct rbtree *w=NULL;
+  if(x!=NULL)
+  {
+  while(x!=root && x->color==BLACK)
+  {
+    if(x==x->parent->left)
+    {
+      w=x->parent->right;
+      if(w->color==RED)
+      {
+        w->color=BLACK;
+        x->parent->color=RED;
+        left_rotate(x->parent);
+        w=x->parent->right;
+      }//case 1
+      if(w->left->color==BLACK && w->right->color==BLACK)
+      {
+        w->color=RED;
+        x=x->parent;
+      }//case 2
+      else if(w->right->color==BLACK)
+      {
+        w->left->color=BLACK;
+        w->color=RED;
+        right_rotate(w);
+        w=x->parent->right;
+      }//case 3
+      w->color=x->parent->color;
+      x->parent->color=BLACK;
+      w->right->color=BLACK;
+      left_rotate(x->parent);
+      x=root;//case 4
+    }
+    else
+    {
+      w=x->parent->left;
+      if(w->color==RED)
+      {
+        w->color=BLACK;
+        x->parent->color=RED;
+        right_rotate(x->parent);
+        w=x->parent->left;
+      }//case 1
+      if(w->right->color==BLACK && w->left->color==BLACK)
+      {
+        w->color=RED;
+        x=x->parent;
+      }//case 2
+      else if(w->left->color==BLACK)
+      {
+        w->right->color=BLACK;
+        w->color=RED;
+        left_rotate(w);
+        w=x->parent->left;
+      }//case 3
+      w->color=x->parent->color;
+      x->parent->color=BLACK;
+      w->left->color=BLACK;
+      right_rotate(x->parent);
+      x=root;//case 4
+    }
+  }
+  }
+}
 void rbtree_free(struct rbtree *tree);
 void rbtree_print_dfs(struct rbtree *tree, int level);
-void inorder(struct rbtree* tree)
-{
-    if (tree == NULL)
-        return;
-    inorder(tree->left);
-    printf("%d ", tree->key);
-    inorder(tree->right);
-}
-void ok()
-{
-  printf(",,,,,%d\n", root->key);
-}
 int main()
 {
-  // struct rbtree *temp;
-  // temp=(struct rbtree*) malloc(sizeof(struct rbtree));
-  // temp->key=5;
-  // temp->left=NULL;
-  // temp->right=NULL;
-  // temp->parent=NULL;
-  // temp->color=RED;
-  // root=bst(root, temp);
-  // printf("%d\n", root->key);
-  // temp=(struct rbtree*) malloc(sizeof(struct rbtree));
-  // temp->key=7;
-  // temp->left=NULL;
-  // temp->right=NULL;
-  // temp->parent=NULL;
-  // temp->color=RED;
-  // printf("%d\n", root->key);
-  // root=bst(root, temp);
-  // for(int i=10;i>0;i--)
-  // {
-  //   root=rbtree_add(root, i, "ladno");
-  // }
   root=rbtree_add(root, 7, "no");
   root=rbtree_add(root, 8, "da");
   root=rbtree_add(root, 5, "ok");
@@ -229,13 +338,9 @@ int main()
   root=rbtree_add(root, 3, "3");
   root=rbtree_add(root, 10, "3");
   root=rbtree_add(root, 9, "3");
-
-  // root=rbtree_add(root, 6, "3");
-  // root=rbtree_add(root, 9, "daa");
-
-  // print2DUtil(root, 0);
-  // right_rotate(root->left);
   print2DUtil(root, 0);
-  //printf("%s\n", root->value);
-  // Create(5);
+printf("--------------------------------------------\n");
+  rbtree_delete(root, 2);
+  // printf("==%s\n", rbtree_lookup(root, 5)->value);
+  print2DUtil(root, 0);
 }
